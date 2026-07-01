@@ -1,59 +1,216 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Bakup
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Bakup** adalah aplikasi manajemen backup database MySQL yang dirancang untuk membantu developer, system administrator, dan perusahaan dalam melakukan backup, restore, monitoring, serta penjadwalan backup secara otomatis dengan antarmuka yang modern dan mudah digunakan.
 
-## About Laravel
+Aplikasi ini dibangun sebagai dashboard web berbasis Laravel dengan UI gelap (dark mode), Alpine.js, dan Tailwind CSS. Engine backup menggunakan [Spatie Laravel Backup](https://github.com/spatie/laravel-backup) dengan penyesuaian khusus untuk lingkungan Windows/Laragon.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Fitur Utama
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Koneksi Database
+- Kelola banyak koneksi MySQL (host, port, database, kredensial)
+- Uji koneksi langsung dari form sebelum disimpan
 
-## Learning Laravel
+### Backup Profile
+- Backup **database**, **folder**, atau keduanya dalam satu profil
+- Pilih tabel yang di-**exclude** dari dump
+- Opsi **stored procedures** (`--routines`) dan **views**
+- Kompresi: tanpa kompresi, GZIP dump, atau ZIP (disarankan)
+- **Penjadwalan otomatis**: manual, hourly, harian, mingguan, bulanan, atau custom cron
+- **Retention policy**: simpan N backup terakhir, atau hapus yang lebih lama dari X hari
+- Jalankan backup manual dengan modal progress real-time
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Storage Destinations
+- **Local** — penyimpanan di server aplikasi
+- **SFTP** — server remote via SFTP
+- **S3 Compatible** — Amazon S3, Cloudflare R2, Wasabi, MinIO, dll.
+- Uji koneksi storage sebelum disimpan
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Backup History & Monitoring
+- Riwayat setiap eksekusi backup (sukses/gagal, ukuran, durasi)
+- Unduh arsip backup dari history
+- Retry backup yang gagal
+- Dashboard overview: statistik, grafik aktivitas 30 hari, backup terjadwal berikutnya
 
-## Laravel Sponsors
+### Notifikasi
+- **Email** (SMTP) saat backup sukses atau gagal
+- **WhatsApp** via API pihak ketiga (Fonnte, WATI, dll.)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Keamanan & Audit
+- Autentikasi login dengan role **Administrator** (Spatie Permission)
+- Activity log untuk perubahan konfigurasi (Spatie Activity Log)
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Tech Stack
 
-## Contributing
+| Layer | Teknologi |
+|-------|-----------|
+| Backend | PHP 8.2+, Laravel 12 |
+| Backup Engine | Spatie Laravel Backup 9 |
+| Frontend | Blade, Alpine.js 3, Tailwind CSS 4, Vite 7 |
+| Queue & Cache | Redis |
+| Testing | Pest PHP 3 |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Persyaratan
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- PHP 8.2+ dengan ekstensi: `pdo_mysql`, `mbstring`, `openssl`, `json`, `redis`
+- Composer 2.x
+- Node.js 20+ & npm
+- MySQL 5.7+ / MariaDB 10.3+
+- Redis (session, cache, queue)
+- `mysqldump` di PATH server (atau konfigurasi path khusus untuk Windows/Laragon)
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Instalasi
 
-## License
+```bash
+git clone <repository-url> bakup
+cd bakup
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+composer setup
+```
+
+Perintah `composer setup` akan menjalankan: `composer install`, membuat `.env`, generate key, migrate, `npm install`, dan `npm run build`.
+
+Atau langkah manual:
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm install
+npm run build
+```
+
+---
+
+## Konfigurasi
+
+Salin `.env.example` ke `.env` lalu sesuaikan:
+
+```env
+APP_NAME="Bakup"
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_DATABASE=backup_manager
+DB_USERNAME=root
+DB_PASSWORD=
+
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+```
+
+### Variabel khusus backup (Windows/Laragon)
+
+```env
+# Path mysqldump. Kosongkan untuk auto-detect (Laragon).
+BACKUP_MYSQLDUMP_PATH=
+BACKUP_MYSQLDUMP_AUTO_DETECT=true
+
+# Socket MySQL lokal. Kosongkan untuk auto-detect dari my.ini.
+BACKUP_MYSQL_SOCKET=
+BACKUP_MYSQL_SOCKET_AUTO_DETECT=true
+
+# Fallback dump via PHP PDO jika mysqldump gagal di Windows
+BACKUP_MYSQL_DUMP_PHP_FALLBACK=true
+
+BACKUP_GZIP_PATH=
+BACKUP_GZIP_AUTO_DETECT=true
+BACKUP_GZIP_ENABLED=false
+```
+
+---
+
+## Menjalankan Aplikasi
+
+### Development
+
+```bash
+composer dev
+```
+
+Menjalankan secara bersamaan: `php artisan serve`, queue worker, log tail (`pail`), dan Vite dev server.
+
+Atau terpisah:
+
+```bash
+php artisan serve
+php artisan queue:work redis --tries=3 --timeout=630
+npm run dev
+```
+
+### Production
+
+Pastikan scheduler Laravel berjalan (cron) dan queue worker aktif:
+
+```bash
+# Cron — jalankan setiap menit
+* * * * * cd /path/to/bakup && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Untuk Linux dengan Supervisor, gunakan skrip bawaan:
+
+```bash
+bash deploy/install-supervisor.sh /path/to/bakup
+```
+
+Scheduler menjalankan:
+- `backup:process` — setiap menit (backup terjadwal)
+- `backup:cleanup-retention` — setiap hari pukul 04:00
+
+---
+
+## Akun Default (Seeder)
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@backupmanager.test` | `password` | Administrator |
+| `admin@local.test` | `Admin123!` | Administrator |
+
+> Ganti password segera setelah instalasi di lingkungan production.
+
+---
+
+## Testing
+
+```bash
+composer test
+# atau
+php artisan test
+```
+
+---
+
+## Restore Backup
+
+Saat ini Bakup mendukung **unduh file backup** dari halaman Backup History. File arsip (ZIP/SQL) dapat digunakan untuk restore manual ke MySQL menggunakan `mysql` CLI atau alat database favorit Anda.
+
+Fitur restore terintegrasi dari antarmuka web direncanakan sebagai pengembangan selanjutnya.
+
+---
+
+## Struktur Modul
+
+```
+Dashboard              → Ringkasan statistik & aktivitas backup
+Database Connections   → Koneksi MySQL sumber backup
+Backup Profiles        → Konfigurasi backup, schedule, retention
+Storage Destinations   → Target penyimpanan (Local/SFTP/S3)
+Backup History         → Riwayat, unduh, retry
+Notifications          → Channel email & WhatsApp
+```
+
+---
+
+## Lisensi
+
+Proyek ini menggunakan lisensi [MIT](https://opensource.org/licenses/MIT).
