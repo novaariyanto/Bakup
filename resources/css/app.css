@@ -84,4 +84,36 @@
     .badge-zinc {
         @apply bg-zinc-500/10 text-zinc-400 ring-zinc-500/20;
     }
+
+    .form-section {
+        @apply rounded-xl border border-zinc-800 bg-zinc-900/30 p-5 sm:p-6;
+    }
+
+    .form-section-header {
+        @apply mb-5 flex items-start gap-3 border-b border-zinc-800/80 pb-4;
+    }
+
+    .form-section-step {
+        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-sm font-semibold text-indigo-400 ring-1 ring-indigo-500/25;
+    }
+
+    .backup-type-card {
+        @apply relative flex cursor-pointer flex-col gap-1 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 transition hover:border-zinc-600 hover:bg-zinc-900/60;
+    }
+
+    .backup-type-card:has(input:checked) {
+        @apply border-indigo-500/50 bg-indigo-500/5 ring-1 ring-indigo-500/30;
+    }
+
+    .table-mode-select-with_data {
+        @apply border-zinc-700 bg-zinc-900 text-zinc-200;
+    }
+
+    .table-mode-select-structure_only {
+        @apply border-amber-500/30 bg-amber-500/10 text-amber-200;
+    }
+
+    .table-mode-select-exclude {
+        @apply border-red-500/30 bg-red-500/10 text-red-200;
+    }
 }

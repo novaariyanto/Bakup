@@ -9,7 +9,7 @@
         <p class="text-sm text-zinc-500">{{ $profile->name }}</p>
     </div>
 
-    <x-ui.card class="max-w-3xl">
+    <x-ui.card class="max-w-4xl">
         <form method="POST" action="{{ route('backup-profiles.update', $profile) }}">
             @csrf
             @method('PUT')
@@ -24,9 +24,9 @@
                 'availableTables' => $availableTables ?? [],
             ])
 
-            <div class="mt-6 flex justify-end gap-2 border-t border-zinc-800 pt-4">
+            <div class="mt-8 flex justify-end gap-2 border-t border-zinc-800 pt-4">
                 <a href="{{ route('backup-profiles.index') }}" class="btn-secondary">Batal</a>
-                <button type="submit" class="btn-primary">Simpan</button>
+                <button type="submit" class="btn-primary">Simpan Perubahan</button>
             </div>
         </form>
     </x-ui.card>

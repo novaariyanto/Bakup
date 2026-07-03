@@ -60,6 +60,52 @@ document.addEventListener('alpine:init', () => {
             }[mode] ?? mode;
         },
 
+        tableModeStats() {
+            let structureOnly = 0;
+            let exclude = 0;
+
+            this.availableTables.forEach((table) => {
+                const mode = this.tableMode(table.name);
+                if (mode === 'structure_only') structureOnly++;
+                if (mode === 'exclude') exclude++;
+            });
+
+            Object.entries(this.tableModes).forEach(([name, mode]) => {
+                if (this.loadedTableNames().has(name)) return;
+                if (mode === 'structure_only') structureOnly++;
+                if (mode === 'exclude') exclude++;
+            });
+
+            const total = this.availableTables.length + this.manualConfiguredTables().length;
+            const withData = total - structureOnly - exclude;
+
+            return { withData, structureOnly, exclude };
+        },
+
+        modeRowClass(name) {
+            const mode = this.tableMode(name);
+            if (mode === 'exclude') return 'bg-red-500/5';
+            if (mode === 'structure_only') return 'bg-amber-500/5';
+            return 'hover:bg-zinc-900/40';
+        },
+
+        modeSelectClass(name) {
+            return 'table-mode-select-' + this.tableMode(name);
+        },
+
+        modeTagClass(mode) {
+            return {
+                with_data: 'border-zinc-700 bg-zinc-900/60 text-zinc-200',
+                structure_only: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                exclude: 'border-red-500/30 bg-red-500/10 text-red-200',
+            }[mode] ?? 'border-zinc-700 bg-zinc-900/60 text-zinc-200';
+        },
+
+        onConnectionChange() {
+            this.availableTables = [];
+            this.tablesError = null;
+        },
+
         setTableMode(name, mode) {
             if (mode === 'with_data') {
                 delete this.tableModes[name];

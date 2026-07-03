@@ -25,7 +25,7 @@ it('renders load tables action on create page', function () {
 
     $this->get(route('backup-profiles.create'))
         ->assertOk()
-        ->assertSee('Muat Tabel')
+        ->assertSee('Muat Daftar Tabel')
         ->assertSee('Mode Backup Tabel')
         ->assertSee('Structure Only')
         ->assertSee('Exclude');
