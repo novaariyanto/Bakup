@@ -296,25 +296,25 @@
                     </div>
                     <p x-show="manualTableError" x-cloak class="mt-2 text-xs text-red-400" x-text="manualTableError"></p>
 
-                    <div x-show="configuredTables().length > 0" x-cloak class="mt-3">
-                        <p class="mb-2 text-xs font-medium text-zinc-500">Tabel dikonfigurasi (<span x-text="configuredTables().length"></span>)</p>
+                    <div x-show="configuredTableEntries.length > 0" x-cloak class="mt-3">
+                        <p class="mb-2 text-xs font-medium text-zinc-500">Tabel dikonfigurasi (<span x-text="configuredTableEntries.length"></span>)</p>
                         <div class="flex flex-wrap gap-2">
-                            <template x-for="[name, mode] in configuredTables()" :key="'tag-' + name">
+                            <template x-for="entry in configuredTableEntries" :key="'tag-' + entry[0]">
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-xs"
-                                    :class="modeTagClass(mode)"
+                                    :class="modeTagClass(entry[1])"
                                 >
-                                    <span x-text="name"></span>
-                                    <span class="opacity-70" x-text="tableModeLabel(mode)"></span>
-                                    <button type="button" class="rounded p-0.5 opacity-60 hover:opacity-100" @click="removeConfiguredTable(name)">&times;</button>
+                                    <span x-text="entry[0]"></span>
+                                    <span class="opacity-70" x-text="tableModeLabel(entry[1])"></span>
+                                    <button type="button" class="rounded p-0.5 opacity-60 hover:opacity-100" @click="removeConfiguredTable(entry[0])">&times;</button>
                                 </span>
                             </template>
                         </div>
                     </div>
                 </div>
 
-                <template x-for="[name, mode] in configuredTables()" :key="'mode-' + name">
-                    <input type="hidden" :name="'table_dump_modes[' + name + ']'" :value="mode">
+                <template x-for="entry in configuredTableEntries" :key="'mode-' + entry[0]">
+                    <input type="hidden" :name="'table_dump_modes[' + entry[0] + ']'" :value="entry[1]">
                 </template>
                 @error('table_dump_modes') <p class="mt-2 text-xs text-red-400">{{ $message }}</p> @enderror
                 @error('table_dump_modes.*') <p class="mt-2 text-xs text-red-400">{{ $message }}</p> @enderror

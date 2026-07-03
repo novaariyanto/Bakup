@@ -114,7 +114,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        configuredTables() {
+        get configuredTableEntries() {
             return Object.entries(this.tableModes);
         },
 
