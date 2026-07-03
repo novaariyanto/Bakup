@@ -23,6 +23,7 @@ use App\Support\BackupLogger;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Backup\Tasks\Backup\DbDumperFactory;
+use App\Support\Backup\Dumpers\StructureAwareMySql;
 use App\Support\Backup\Dumpers\WindowsCompatibleMySql;
 
 class AppServiceProvider extends ServiceProvider
@@ -61,6 +62,8 @@ class AppServiceProvider extends ServiceProvider
     {
         if (PHP_OS_FAMILY === 'Windows') {
             DbDumperFactory::extend('mysql', fn () => WindowsCompatibleMySql::create());
+        } else {
+            DbDumperFactory::extend('mysql', fn () => StructureAwareMySql::create());
         }
 
         $logListener = LogBackupLifecycle::class;

@@ -87,7 +87,7 @@ class BackupProfileController extends Controller
                 'selected_destination_ids' => [],
                 'include_folders' => [],
                 'exclude_folders' => [],
-                'excluded_table_names' => [],
+                'table_dump_modes' => [],
             ],
         ]);
     }
@@ -145,7 +145,9 @@ class BackupProfileController extends Controller
                 'selected_destination_ids' => $profile->destinations->pluck('id')->map(fn ($id) => (int) $id)->all(),
                 'include_folders' => $profile->includeFolders->pluck('path')->all(),
                 'exclude_folders' => $profile->excludeFolders->pluck('path')->all(),
-                'excluded_table_names' => $profile->excludedTables->pluck('table_name')->all(),
+                'table_dump_modes' => $profile->excludedTables
+                    ->mapWithKeys(fn ($table) => [$table->table_name => $table->dump_mode->value])
+                    ->all(),
             ],
         ]);
     }

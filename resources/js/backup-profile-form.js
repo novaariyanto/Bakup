@@ -7,8 +7,9 @@ document.addEventListener('alpine:init', () => {
         excludeFolders: config.excludeFolders ?? [],
         tableSearch: '',
         availableTables: config.availableTables ?? [],
-        excludedTableNames: config.excludedTableNames ?? [],
+        tableModes: config.tableModes ?? {},
         manualTableInput: '',
+        manualTableMode: 'structure_only',
         manualTableError: null,
         loadingTables: false,
         tablesError: null,
@@ -47,38 +48,48 @@ document.addEventListener('alpine:init', () => {
             return this.availableTables.filter((table) => table.name.toLowerCase().includes(query));
         },
 
-        isExcluded(name) {
-            return this.excludedTableNames.includes(name);
+        tableMode(name) {
+            return this.tableModes[name] ?? 'with_data';
         },
 
-        toggleExcluded(name) {
-            const index = this.excludedTableNames.indexOf(name);
-
-            if (index >= 0) {
-                this.excludedTableNames.splice(index, 1);
+        setTableMode(name, mode) {
+            if (mode === 'with_data') {
+                delete this.tableModes[name];
             } else {
-                this.excludedTableNames.push(name);
+                this.tableModes[name] = mode;
             }
         },
 
-        selectAllTables() {
-            const loaded = this.availableTables.map((table) => table.name);
-            const manual = this.manualExcludedTables();
-            this.excludedTableNames = [...new Set([...manual, ...loaded])];
+        configuredTables() {
+            return Object.entries(this.tableModes);
         },
 
-        clearExcludedTables() {
-            this.excludedTableNames = [];
+        setAllStructureOnly() {
+            const modes = {};
+
+            this.availableTables.forEach((table) => {
+                modes[table.name] = 'structure_only';
+            });
+
+            this.manualConfiguredTables().forEach((name) => {
+                modes[name] = 'structure_only';
+            });
+
+            this.tableModes = modes;
+        },
+
+        resetTableModes() {
+            this.tableModes = {};
         },
 
         loadedTableNames() {
             return new Set(this.availableTables.map((table) => table.name));
         },
 
-        manualExcludedTables() {
+        manualConfiguredTables() {
             const loaded = this.loadedTableNames();
 
-            return this.excludedTableNames.filter((name) => !loaded.has(name));
+            return Object.keys(this.tableModes).filter((name) => !loaded.has(name));
         },
 
         normalizeTableName(name) {
@@ -112,20 +123,18 @@ document.addEventListener('alpine:init', () => {
             }
 
             candidates.forEach((name) => {
-                if (!this.excludedTableNames.includes(name)) {
-                    this.excludedTableNames.push(name);
+                if (this.manualTableMode === 'with_data') {
+                    delete this.tableModes[name];
+                } else {
+                    this.tableModes[name] = this.manualTableMode;
                 }
             });
 
             this.manualTableInput = '';
         },
 
-        removeExcluded(name) {
-            const index = this.excludedTableNames.indexOf(name);
-
-            if (index >= 0) {
-                this.excludedTableNames.splice(index, 1);
-            }
+        removeConfiguredTable(name) {
+            delete this.tableModes[name];
         },
 
         tableMeta(table) {

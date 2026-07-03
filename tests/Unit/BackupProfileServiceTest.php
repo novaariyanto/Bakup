@@ -38,13 +38,16 @@ it('creates profile with synced relations', function () {
         'destination_ids' => [$destination->id],
         'include_folders' => ['storage/app'],
         'exclude_folders' => ['vendor'],
-        'excluded_tables' => ['migrations'],
+        'table_dump_modes' => [
+            'migrations' => 'structure_only',
+        ],
     ]);
 
     expect($profile->destinations)->toHaveCount(1);
     expect($profile->includeFolders->pluck('path')->all())->toBe(['storage/app']);
     expect($profile->excludeFolders->pluck('path')->all())->toBe(['vendor']);
     expect($profile->excludedTables->pluck('table_name')->all())->toBe(['migrations']);
+    expect($profile->excludedTables->first()->dump_mode->value)->toBe('structure_only');
 });
 
 it('requires at least one backup type', function () {

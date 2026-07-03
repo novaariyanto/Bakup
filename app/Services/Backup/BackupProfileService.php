@@ -3,6 +3,7 @@
 namespace App\Services\Backup;
 
 use App\DTO\DatabaseTableInfo;
+use App\Enums\TableDumpMode;
 use App\Exceptions\BackupProfileException;
 use App\Models\BackupProfile;
 use App\Models\DatabaseConnection;
@@ -142,15 +143,21 @@ class BackupProfileService extends BaseService
      */
     private function syncRelations(BackupProfile $profile, array $data): void
     {
-        $excludedTables = array_values(array_unique(array_filter($data['excluded_tables'] ?? [])));
+        $tableDumpModes = $this->normalizeTableDumpModes($data['table_dump_modes'] ?? []);
         $includeFolders = $this->normalizePaths($data['include_folders'] ?? []);
         $excludeFolders = $this->normalizePaths($data['exclude_folders'] ?? []);
         $destinationIds = array_values(array_filter($data['destination_ids'] ?? []));
 
         $profile->excludedTables()->delete();
-        if ($excludedTables !== []) {
+        if ($tableDumpModes !== []) {
             $profile->excludedTables()->createMany(
-                array_map(fn (string $table) => ['table_name' => $table], $excludedTables)
+                array_map(
+                    fn (array $table) => [
+                        'table_name' => $table['table_name'],
+                        'dump_mode' => $table['dump_mode'],
+                    ],
+                    $tableDumpModes,
+                ),
             );
         }
 
@@ -174,6 +181,35 @@ class BackupProfileService extends BaseService
         }
 
         $profile->destinations()->sync($syncData);
+    }
+
+    /**
+     * @param  array<string, mixed>  $modes
+     * @return list<array{table_name: string, dump_mode: string}>
+     */
+    private function normalizeTableDumpModes(array $modes): array
+    {
+        $normalized = [];
+
+        foreach ($modes as $tableName => $mode) {
+            $tableName = trim((string) $tableName);
+            $mode = trim((string) $mode);
+
+            if ($tableName === '' || $mode === TableDumpMode::WithData->value) {
+                continue;
+            }
+
+            if (TableDumpMode::tryFrom($mode) !== TableDumpMode::StructureOnly) {
+                continue;
+            }
+
+            $normalized[] = [
+                'table_name' => $tableName,
+                'dump_mode' => TableDumpMode::StructureOnly->value,
+            ];
+        }
+
+        return $normalized;
     }
 
     private function normalizePaths(array $paths): array

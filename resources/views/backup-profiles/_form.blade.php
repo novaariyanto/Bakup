@@ -20,7 +20,7 @@
         'selected_destination_ids' => [],
         'include_folders' => [],
         'exclude_folders' => [],
-        'excluded_table_names' => [],
+        'table_dump_modes' => [],
     ], $formDefaults ?? []);
 
     $scheduleType = old('schedule_type', $isEdit ? $profile->schedule_type->value : $defaults['schedule_type']);
@@ -30,7 +30,9 @@
     $includeViews = (bool) old('include_views', $isEdit ? $profile->include_views : $defaults['include_views']);
     $includeFolders = old('include_folders', $isEdit ? $profile->includeFolders->pluck('path')->all() : $defaults['include_folders']);
     $excludeFolders = old('exclude_folders', $isEdit ? $profile->excludeFolders->pluck('path')->all() : $defaults['exclude_folders']);
-    $excludedTableNames = old('excluded_table_names', $isEdit ? $profile->excludedTables->pluck('table_name')->all() : $defaults['excluded_table_names']);
+    $tableDumpModes = old('table_dump_modes', $isEdit
+        ? $profile->excludedTables->mapWithKeys(fn ($table) => [$table->table_name => $table->dump_mode->value])->all()
+        : $defaults['table_dump_modes']);
     $selectedDestinationIds = old('selected_destination_ids', $isEdit
         ? $profile->destinations->pluck('id')->map(fn ($id) => (int) $id)->all()
         : $defaults['selected_destination_ids']);
@@ -48,7 +50,7 @@
         'includeFolders' => array_values($includeFolders),
         'excludeFolders' => array_values($excludeFolders),
         'availableTables' => $initialAvailableTables,
-        'excludedTableNames' => array_values($excludedTableNames),
+        'tableModes' => $tableDumpModes,
         'tablesEndpoint' => url('/backup-profiles/tables'),
         'autoLoadTables' => filled($initialConnectionId) && empty($initialAvailableTables),
     ];
@@ -159,12 +161,12 @@
     <div x-show="backupDatabase" x-cloak class="rounded-lg border border-zinc-800 p-4">
         <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-sm font-medium text-zinc-300">Excluded Tables</p>
-                <p class="text-xs text-zinc-500">Centang dari daftar atau tambah manual (pisahkan dengan koma)</p>
+                <p class="text-sm font-medium text-zinc-300">Mode Backup Tabel</p>
+                <p class="text-xs text-zinc-500">Atur mode per tabel: With Data (schema + data) atau Structure Only (schema saja)</p>
             </div>
             <div class="flex gap-2">
-                <button type="button" @click="selectAllTables()" class="btn-secondary text-xs" :disabled="availableTables.length === 0">Pilih Semua</button>
-                <button type="button" @click="clearExcludedTables()" class="btn-secondary text-xs">Hapus Semua</button>
+                <button type="button" @click="setAllStructureOnly()" class="btn-secondary text-xs" :disabled="availableTables.length === 0">Semua Structure Only</button>
+                <button type="button" @click="resetTableModes()" class="btn-secondary text-xs">Reset Default</button>
             </div>
         </div>
 
@@ -180,19 +182,20 @@
             <div class="mb-3">
                 <input x-model="tableSearch" type="text" class="input-field" placeholder="Cari tabel..." />
             </div>
-            <div class="max-h-48 overflow-y-auto rounded-lg border border-zinc-800">
+            <div class="max-h-64 overflow-y-auto rounded-lg border border-zinc-800">
                 <template x-for="table in filteredTables()" :key="table.name">
-                    <label class="flex items-center gap-3 border-b border-zinc-800/60 px-3 py-2 text-sm last:border-0 hover:bg-zinc-900/50">
-                        <input
-                            type="checkbox"
-                            :checked="isExcluded(table.name)"
-                            @change="toggleExcluded(table.name)"
-                            data-excluded-table
-                            class="rounded border-zinc-600 bg-zinc-800 text-indigo-600 focus:ring-indigo-500/30"
+                    <div class="flex items-center gap-3 border-b border-zinc-800/60 px-3 py-2 text-sm last:border-0 hover:bg-zinc-900/50">
+                        <span class="flex-1 font-medium font-mono text-zinc-200" x-text="table.name"></span>
+                        <span class="hidden text-xs text-zinc-500 sm:inline" x-text="tableMeta(table)"></span>
+                        <select
+                            class="input-field w-36 shrink-0 py-1.5 text-xs"
+                            :value="tableMode(table.name)"
+                            @change="setTableMode(table.name, $event.target.value)"
                         >
-                        <span class="flex-1 font-medium text-zinc-200" x-text="table.name"></span>
-                        <span class="text-xs text-zinc-500" x-text="tableMeta(table)"></span>
-                    </label>
+                            <option value="with_data">With Data</option>
+                            <option value="structure_only">Structure Only</option>
+                        </select>
+                    </div>
                 </template>
             </div>
         </div>
@@ -204,24 +207,29 @@
                     x-model="manualTableInput"
                     type="text"
                     class="input-field flex-1 font-mono text-sm"
-                    placeholder="activity_log, backup_destinations, backup_histories"
+                    placeholder="activity_log, sessions"
                     @keydown.enter.prevent="addManualTables()"
                 >
+                <select x-model="manualTableMode" class="input-field w-40 shrink-0 text-sm">
+                    <option value="with_data">With Data</option>
+                    <option value="structure_only">Structure Only</option>
+                </select>
                 <button type="button" class="btn-secondary shrink-0" @click="addManualTables()">Tambah</button>
             </div>
-            <p class="mt-1 text-xs text-zinc-500">Gunakan nama tabel persis seperti di database. Beberapa nama bisa dipisah koma.</p>
+            <p class="mt-1 text-xs text-zinc-500">Beberapa nama tabel bisa dipisah koma.</p>
             <p x-show="manualTableError" x-cloak class="mt-2 text-xs text-red-400" x-text="manualTableError"></p>
 
-            <div x-show="excludedTableNames.length > 0" x-cloak class="mt-3">
-                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Tabel di-exclude (<span x-text="excludedTableNames.length"></span>)</p>
+            <div x-show="configuredTables().length > 0" x-cloak class="mt-3">
+                <p class="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Tabel dikonfigurasi (<span x-text="configuredTables().length"></span>)</p>
                 <div class="flex flex-wrap gap-2">
-                    <template x-for="name in excludedTableNames" :key="'tag-' + name">
+                    <template x-for="[name, mode] in configuredTables()" :key="'tag-' + name">
                         <span class="inline-flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-900/60 px-2.5 py-1 font-mono text-xs text-zinc-200">
                             <span x-text="name"></span>
+                            <span class="text-zinc-500" x-text="'(' + (mode === 'structure_only' ? 'Structure Only' : 'With Data') + ')'"></span>
                             <button
                                 type="button"
                                 class="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
-                                @click="removeExcluded(name)"
+                                @click="removeConfiguredTable(name)"
                                 title="Hapus"
                             >&times;</button>
                         </span>
@@ -230,11 +238,11 @@
             </div>
         </div>
 
-        <template x-for="name in excludedTableNames" :key="'excluded-' + name">
-            <input type="hidden" name="excluded_table_names[]" :value="name">
+        <template x-for="[name, mode] in configuredTables()" :key="'mode-' + name">
+            <input type="hidden" :name="'table_dump_modes[' + name + ']'" :value="mode">
         </template>
-        @error('excluded_table_names') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
-        @error('excluded_table_names.*') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
+        @error('table_dump_modes') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
+        @error('table_dump_modes.*') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
     </div>
 
     <div x-show="backupFolders" x-cloak class="rounded-lg border border-zinc-800 p-4 space-y-4">

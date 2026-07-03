@@ -2,22 +2,12 @@
 
 namespace App\Support\Backup\Dumpers;
 
-use Spatie\DbDumper\Databases\MySql;
 use Spatie\DbDumper\Exceptions\DumpFailed;
 use Symfony\Component\Process\Process;
 use Throwable;
 
-class WindowsCompatibleMySql extends MySql
+class WindowsCompatibleMySql extends StructureAwareMySql
 {
-    protected bool $includeViews = false;
-
-    public function setIncludeViews(bool $includeViews = true): self
-    {
-        $this->includeViews = $includeViews;
-
-        return $this;
-    }
-
     public function dumpToFile(string $dumpFile): void
     {
         if (! $this->isWindows()) {
@@ -27,49 +17,59 @@ class WindowsCompatibleMySql extends MySql
         }
 
         $this->guardAgainstIncompleteCredentials();
+        $this->beginStructureOnlyMainDump();
 
-        $errors = [];
+        try {
+            $errors = [];
 
-        foreach ($this->socketCandidates() as $socket) {
+            foreach ($this->socketCandidates() as $socket) {
+                try {
+                    $this->runWindowsDump($dumpFile, $socket);
+                    $this->appendStructureOnlyTables($dumpFile);
+
+                    return;
+                } catch (DumpFailed $exception) {
+                    $errors[] = $exception->getMessage();
+
+                    if (! $this->isRetryableConnectionError($exception->getMessage())) {
+                        throw $exception;
+                    }
+                }
+            }
+
             try {
-                $this->runWindowsDump($dumpFile, $socket);
-
-                return;
+                $this->runWindowsDump($dumpFile, null);
+                $this->appendStructureOnlyTables($dumpFile);
             } catch (DumpFailed $exception) {
                 $errors[] = $exception->getMessage();
 
-                if (! $this->isRetryableConnectionError($exception->getMessage())) {
+                if (! $this->shouldUsePhpFallback($exception->getMessage())) {
                     throw $exception;
                 }
-            }
-        }
 
-        try {
-            $this->runWindowsDump($dumpFile, null);
-        } catch (DumpFailed $exception) {
-            $errors[] = $exception->getMessage();
-
-            if (! $this->shouldUsePhpFallback($exception->getMessage())) {
-                throw $exception;
+                try {
+                    (new PhpMysqlDumper)->dumpToFile(
+                        host: $this->host,
+                        port: $this->port,
+                        database: $this->dbName,
+                        username: $this->userName,
+                        password: $this->password,
+                        dumpFile: $dumpFile,
+                        excludeTables: $this->structureOnlyTables === []
+                            ? $this->excludeTables
+                            : $this->savedExcludeTablesForStructureOnly,
+                        structureOnlyTables: $this->structureOnlyTables,
+                        includeViews: $this->includeViews,
+                        includeStoredProcedures: in_array('--routines', $this->extraOptions, true),
+                    );
+                } catch (Throwable $fallbackException) {
+                    throw new DumpFailed(
+                        'PHP MySQL dump fallback failed: '.$fallbackException->getMessage().' Previous mysqldump errors: '.implode(' | ', $errors)
+                    );
+                }
             }
-
-            try {
-                (new PhpMysqlDumper)->dumpToFile(
-                    host: $this->host,
-                    port: $this->port,
-                    database: $this->dbName,
-                    username: $this->userName,
-                    password: $this->password,
-                    dumpFile: $dumpFile,
-                    excludeTables: $this->excludeTables,
-                    includeViews: $this->includeViews,
-                    includeStoredProcedures: in_array('--routines', $this->extraOptions, true),
-                );
-            } catch (Throwable $fallbackException) {
-                throw new DumpFailed(
-                    'PHP MySQL dump fallback failed: '.$fallbackException->getMessage().' Previous mysqldump errors: '.implode(' | ', $errors)
-                );
-            }
+        } finally {
+            $this->endStructureOnlyMainDump();
         }
     }
 

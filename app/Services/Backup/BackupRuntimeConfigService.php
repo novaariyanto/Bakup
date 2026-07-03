@@ -5,6 +5,7 @@ namespace App\Services\Backup;
 use App\DTO\RuntimeBackupConfig;
 use App\Enums\CompressionType;
 use App\Models\BackupDestination;
+use App\Enums\TableDumpMode;
 use App\Models\BackupProfile;
 use App\Services\BaseService;
 use App\Services\Storage\StorageDriverManager;
@@ -35,8 +36,14 @@ class BackupRuntimeConfigService extends BaseService
         $connection = $profile->databaseConnection;
         $connectionName = $this->connectionName($profile->id);
 
+        $structureOnlyTables = $profile->excludedTables
+            ->where('dump_mode', TableDumpMode::StructureOnly)
+            ->pluck('table_name')
+            ->all();
+
         $dumpOptions = [
             'exclude_tables' => $this->resolveExcludedTables($profile),
+            'structure_only_tables' => $structureOnlyTables,
             'useSingleTransaction' => true,
             'dump_binary_path' => $this->dumpBinaryResolver->resolve(),
         ];
@@ -244,7 +251,7 @@ class BackupRuntimeConfigService extends BaseService
      */
     private function resolveExcludedTables(BackupProfile $profile): array
     {
-        $excluded = $profile->excludedTables->pluck('table_name')->all();
+        $excluded = [];
 
         if ($profile->backup_database && ! $profile->include_views) {
             $excluded = array_merge(

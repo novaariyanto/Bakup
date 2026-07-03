@@ -3,6 +3,7 @@
 use App\Enums\BackupHistoryStatus;
 use App\Exceptions\BackupExecutionException;
 use App\Jobs\Backup\ExecuteBackupJob;
+use App\Enums\TableDumpMode;
 use App\Models\BackupProfile;
 use App\Models\BackupProfileTable;
 use App\Services\Backup\BackupExecutionService;
@@ -21,6 +22,7 @@ it('builds runtime backup config from profile', function () {
     BackupProfileTable::create([
         'backup_profile_id' => $profile->id,
         'table_name' => 'sessions',
+        'dump_mode' => TableDumpMode::StructureOnly,
     ]);
 
     $profile->load(['databaseConnection', 'destinations', 'excludedTables', 'includeFolders', 'excludeFolders']);
@@ -31,7 +33,8 @@ it('builds runtime backup config from profile', function () {
     expect($runtimeConfig->onlyDatabase)->toBeTrue();
     expect($runtimeConfig->onlyFiles)->toBeFalse();
     expect($runtimeConfig->databaseConnectionConfig['host'])->toBe($profile->databaseConnection->host);
-    expect($runtimeConfig->databaseConnectionConfig['dump']['exclude_tables'])->toBe(['sessions']);
+    expect($runtimeConfig->databaseConnectionConfig['dump']['structure_only_tables'])->toBe(['sessions']);
+    expect($runtimeConfig->databaseConnectionConfig['dump']['exclude_tables'] ?? [])->toBe([]);
     expect($runtimeConfig->destinationDiskNames)->toHaveCount(1);
     expect($runtimeConfig->backupConfig['backup']['name'])->toBe($profile->uuid);
     expect($runtimeConfig->backupConfig['backup']['source']['databases'])->toBe([$runtimeConfig->connectionName]);

@@ -9,6 +9,7 @@ class PhpMysqlDumper
 {
     /**
      * @param  list<string>  $excludeTables
+     * @param  list<string>  $structureOnlyTables
      */
     public function dumpToFile(
         string $host,
@@ -18,6 +19,7 @@ class PhpMysqlDumper
         string $password,
         string $dumpFile,
         array $excludeTables = [],
+        array $structureOnlyTables = [],
         bool $includeViews = false,
         bool $includeStoredProcedures = false,
     ): void {
@@ -32,6 +34,7 @@ class PhpMysqlDumper
         );
 
         $excludeLookup = array_fill_keys($excludeTables, true);
+        $structureOnlyLookup = array_fill_keys($structureOnlyTables, true);
         $handle = fopen($dumpFile, 'wb');
 
         if ($handle === false) {
@@ -52,7 +55,7 @@ class PhpMysqlDumper
                     continue;
                 }
 
-                $this->dumpTable($pdo, $handle, $tableName);
+                $this->dumpTable($pdo, $handle, $tableName, isset($structureOnlyLookup[$tableName]));
             }
 
             if ($includeViews) {
@@ -114,7 +117,7 @@ class PhpMysqlDumper
         }
     }
 
-    private function dumpTable(PDO $pdo, mixed $handle, string $tableName): void
+    private function dumpTable(PDO $pdo, mixed $handle, string $tableName, bool $structureOnly = false): void
     {
         $quotedName = '`'.str_replace('`', '``', $tableName).'`';
         $createStatement = $pdo->query('SHOW CREATE TABLE '.$quotedName)
@@ -123,6 +126,10 @@ class PhpMysqlDumper
         $this->writeLine($handle, 'DROP TABLE IF EXISTS '.$quotedName.';');
         $this->writeLine($handle, ($createStatement['Create Table'] ?? '').';');
         $this->writeLine($handle, '');
+
+        if ($structureOnly) {
+            return;
+        }
 
         $statement = $pdo->query('SELECT * FROM '.$quotedName);
 

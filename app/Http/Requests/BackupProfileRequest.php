@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TableDumpMode;
 use App\Enums\CompressionType;
 use App\Enums\RetentionType;
 use App\Enums\ScheduleType;
@@ -20,7 +21,7 @@ class BackupProfileRequest extends FormRequest
         $this->merge([
             'include_folders' => $this->filterEmptyStrings($this->input('include_folders', [])),
             'exclude_folders' => $this->filterEmptyStrings($this->input('exclude_folders', [])),
-            'excluded_table_names' => $this->filterEmptyStrings($this->input('excluded_table_names', [])),
+            'table_dump_modes' => is_array($this->input('table_dump_modes')) ? $this->input('table_dump_modes') : [],
         ]);
     }
 
@@ -48,8 +49,8 @@ class BackupProfileRequest extends FormRequest
             'include_folders.*' => ['nullable', 'string', 'max:500'],
             'exclude_folders' => ['array'],
             'exclude_folders.*' => ['nullable', 'string', 'max:500'],
-            'excluded_table_names' => ['array'],
-            'excluded_table_names.*' => ['string', 'max:255', 'regex:/^[A-Za-z0-9_]+$/'],
+            'table_dump_modes' => ['array'],
+            'table_dump_modes.*' => ['in:'.implode(',', array_column(TableDumpMode::cases(), 'value'))],
         ];
 
         $scheduleType = ScheduleType::tryFrom($this->string('schedule_type')->toString()) ?? ScheduleType::Manual;
@@ -101,7 +102,7 @@ class BackupProfileRequest extends FormRequest
             'schedule_time.required' => 'Waktu schedule wajib diisi.',
             'schedule_cron.required' => 'Cron expression wajib diisi.',
             'include_folders.required' => 'Tambahkan minimal satu folder untuk di-backup.',
-            'excluded_table_names.*.regex' => 'Nama tabel hanya boleh huruf, angka, dan underscore.',
+            'table_dump_modes.*.in' => 'Mode backup tabel tidak valid.',
         ];
     }
 
@@ -139,7 +140,7 @@ class BackupProfileRequest extends FormRequest
             'destination_ids' => $this->input('selected_destination_ids', []),
             'include_folders' => $this->input('include_folders', []),
             'exclude_folders' => $this->input('exclude_folders', []),
-            'excluded_tables' => $this->input('excluded_table_names', []),
+            'table_dump_modes' => $this->input('table_dump_modes', []),
         ];
     }
 

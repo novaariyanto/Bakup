@@ -26,9 +26,9 @@ it('renders load tables action on create page', function () {
     $this->get(route('backup-profiles.create'))
         ->assertOk()
         ->assertSee('Muat Tabel')
-        ->assertSee('Excluded Tables')
-        ->assertSee('Tambah Manual')
-        ->assertSee('activity_log, backup_destinations, backup_histories');
+        ->assertSee('Mode Backup Tabel')
+        ->assertSee('Structure Only')
+        ->assertSee('activity_log, sessions');
 });
 
 it('shows validation errors when create form is incomplete', function () {
@@ -114,26 +114,31 @@ it('creates a backup profile with destinations', function () {
     expect($profile->schedule_type->value)->toBe('daily');
 });
 
-it('creates a profile with manually excluded tables only', function () {
+it('creates a profile with structure only tables', function () {
     actingAsAdmin();
 
     $connection = DatabaseConnection::factory()->create();
     $destination = BackupDestination::factory()->create();
 
     $this->post(route('backup-profiles.store'), backupProfilePayload([
-        'name' => 'Manual Exclude Profile',
+        'name' => 'Structure Only Profile',
         'database_connection_id' => $connection->id,
-        'excluded_table_names' => ['activity_log', 'backup_destinations', 'backup_histories'],
+        'table_dump_modes' => [
+            'activity_log' => 'structure_only',
+            'backup_destinations' => 'structure_only',
+            'backup_histories' => 'structure_only',
+        ],
         'selected_destination_ids' => [$destination->id],
     ]))->assertRedirect(route('backup-profiles.index'));
 
-    $profile = BackupProfile::where('name', 'Manual Exclude Profile')->first();
+    $profile = BackupProfile::where('name', 'Structure Only Profile')->first();
 
     expect($profile->excludedTables->pluck('table_name')->all())
         ->toEqualCanonicalizing(['activity_log', 'backup_destinations', 'backup_histories']);
+    expect($profile->excludedTables->every(fn ($table) => $table->dump_mode->value === 'structure_only'))->toBeTrue();
 });
 
-it('creates a profile with excluded tables and folders', function () {
+it('creates a profile with structure only tables and folders', function () {
     actingAsAdmin();
 
     $connection = DatabaseConnection::factory()->create();
@@ -145,7 +150,10 @@ it('creates a profile with excluded tables and folders', function () {
         'backup_folders' => '1',
         'include_folders' => ['storage/app'],
         'exclude_folders' => ['storage/logs'],
-        'excluded_table_names' => ['sessions', 'cache'],
+        'table_dump_modes' => [
+            'sessions' => 'structure_only',
+            'cache' => 'structure_only',
+        ],
         'selected_destination_ids' => [$destination->id],
     ]))->assertRedirect(route('backup-profiles.index'));
 
