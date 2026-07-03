@@ -90,10 +90,14 @@ class BackupExecutionService extends BaseService
             $completed = $this->historyService->markSuccess(
                 history: $history,
                 filename: basename($storedFile['path']),
+                compressedSizeBytes: $this->fileSize($storedFile),
                 metadata: [
                     'destination_disks' => $runtimeConfig->destinationDiskNames,
+                    'destination_id' => $storedFile['destination_id'],
                     'connection_name' => $runtimeConfig->connectionName,
                     'storage_path' => $storedFile['path'],
+                    'storage_root' => $storedFile['storage_root'],
+                    'profile_uuid' => $profile->uuid,
                 ],
             );
 
@@ -154,6 +158,20 @@ class BackupExecutionService extends BaseService
             : 'Binary gzip tidak tersedia. Menggunakan dump SQL + arsip ZIP.';
 
         $this->historyService->addLog($history, BackupStage::Preparing, $message);
+    }
+
+    /**
+     * @param  array{disk: \Illuminate\Contracts\Filesystem\Filesystem, path: string}  $storedFile
+     */
+    private function fileSize(array $storedFile): ?int
+    {
+        try {
+            $size = $storedFile['disk']->size($storedFile['path']);
+
+            return is_int($size) ? $size : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function ensureProfileReady(BackupProfile $profile): void

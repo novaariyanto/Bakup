@@ -2,16 +2,23 @@
 
 namespace App\Services\Backup;
 
+use App\Enums\StorageDriver;
 use App\Exceptions\BackupHistoryException;
 use App\Models\BackupDestination;
 use App\Models\BackupHistory;
 use App\Models\BackupProfile;
 use App\Services\BaseService;
+use App\Services\Storage\Drivers\LocalStorageDriver;
 use App\Services\Storage\StorageDriverManager;
+use FilesystemIterator;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class BackupFileService extends BaseService
 {
@@ -28,7 +35,23 @@ class BackupFileService extends BaseService
             throw BackupHistoryException::fileNotFound();
         }
 
-        $filename = basename($location['path']);
+        $filename = $location['filename'] ?? basename($location['path']);
+
+        if (isset($location['absolute_path'])) {
+            return response()->streamDownload(
+                function () use ($location): void {
+                    $stream = fopen($location['absolute_path'], 'rb');
+
+                    if (! is_resource($stream)) {
+                        throw BackupHistoryException::fileNotFound();
+                    }
+
+                    fpassthru($stream);
+                    fclose($stream);
+                },
+                $filename,
+            );
+        }
 
         return response()->streamDownload(
             function () use ($location): void {
@@ -56,11 +79,17 @@ class BackupFileService extends BaseService
             return;
         }
 
+        if (isset($location['absolute_path'])) {
+            @unlink($location['absolute_path']);
+
+            return;
+        }
+
         $location['disk']->delete($location['path']);
     }
 
     /**
-     * @return array{disk: Filesystem, path: string}|null
+     * @return array{disk: Filesystem, path: string, destination_id: int, storage_root: ?string}|null
      */
     public function findLatestBackupFile(BackupProfile $profile): ?array
     {
@@ -71,7 +100,12 @@ class BackupFileService extends BaseService
             $latestPath = $this->latestZipPathOnDisk($disk, $profile->uuid);
 
             if ($latestPath !== null) {
-                return ['disk' => $disk, 'path' => $latestPath];
+                return [
+                    'disk' => $disk,
+                    'path' => $latestPath,
+                    'destination_id' => $destination->id,
+                    'storage_root' => $this->storageRootFor($destination),
+                ];
             }
         }
 
@@ -79,7 +113,7 @@ class BackupFileService extends BaseService
     }
 
     /**
-     * @return array{disk: Filesystem, path: string}|null
+     * @return array{disk?: Filesystem, path?: string, absolute_path?: string, filename?: string}|null
      */
     public function resolveFileLocation(BackupHistory $history): ?array
     {
@@ -91,10 +125,14 @@ class BackupFileService extends BaseService
             return null;
         }
 
-        $storedPath = $history->metadata['storage_path'] ?? null;
+        if ($location = $this->tryMetadataStorageRoot($history)) {
+            return $location;
+        }
 
-        if (is_string($storedPath) && $storedPath !== '') {
-            foreach ($profile->destinations as $destination) {
+        $storedPath = $this->normalizeStoragePath($history->metadata['storage_path'] ?? '');
+
+        if ($storedPath !== '') {
+            foreach ($this->destinationsToSearch($history, $profile) as $destination) {
                 $disk = $this->diskForDestination($destination, $profile->id);
 
                 if ($disk->exists($storedPath)) {
@@ -109,7 +147,7 @@ class BackupFileService extends BaseService
             return $this->findLatestBackupFile($profile);
         }
 
-        foreach ($profile->destinations as $destination) {
+        foreach ($this->destinationsToSearch($history, $profile) as $destination) {
             $disk = $this->diskForDestination($destination, $profile->id);
             $matched = $this->findPathByFilename($disk, $filename, $profile->uuid);
 
@@ -118,11 +156,108 @@ class BackupFileService extends BaseService
             }
         }
 
-        return null;
+        return $this->scanLocalBackupsDirectory($filename, $profile->uuid);
+    }
+
+    /**
+     * @return Collection<int, BackupDestination>
+     */
+    private function destinationsToSearch(BackupHistory $history, BackupProfile $profile): Collection
+    {
+        $destinations = $profile->destinations;
+
+        $metadataDestinationId = $history->metadata['destination_id'] ?? null;
+
+        if (! is_numeric($metadataDestinationId)) {
+            return $destinations;
+        }
+
+        $storedDestination = BackupDestination::withTrashed()->find((int) $metadataDestinationId);
+
+        if ($storedDestination === null || $destinations->contains('id', $storedDestination->id)) {
+            return $destinations;
+        }
+
+        return collect([$storedDestination])->merge($destinations);
+    }
+
+    /**
+     * @return array{absolute_path: string, filename: string}|null
+     */
+    private function tryMetadataStorageRoot(BackupHistory $history): ?array
+    {
+        $metadata = $history->metadata ?? [];
+        $storageRoot = $metadata['storage_root'] ?? null;
+        $storagePath = $this->normalizeStoragePath($metadata['storage_path'] ?? '');
+
+        if (! is_string($storageRoot) || trim($storageRoot) === '' || $storagePath === '') {
+            return null;
+        }
+
+        $absolutePath = $this->absolutePath($storageRoot, $storagePath);
+
+        if (! is_file($absolutePath)) {
+            return null;
+        }
+
+        return [
+            'absolute_path' => $absolutePath,
+            'filename' => basename($storagePath),
+        ];
+    }
+
+    /**
+     * @return array{absolute_path: string, filename: string}|null
+     */
+    private function scanLocalBackupsDirectory(string $filename, string $profileUuid): ?array
+    {
+        $backupsRoot = storage_path('app/backups');
+
+        if (! is_dir($backupsRoot)) {
+            return null;
+        }
+
+        $normalizedFilename = trim($filename);
+        $normalizedUuid = trim($profileUuid, '/');
+        $matches = [];
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($backupsRoot, FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if (! $file->isFile()) {
+                continue;
+            }
+
+            $path = str_replace('\\', '/', $file->getPathname());
+            $base = $file->getFilename();
+
+            if (! str_ends_with(strtolower($path), '.zip')) {
+                continue;
+            }
+
+            if ($base === $normalizedFilename || str_ends_with($path, '/'.$normalizedUuid.'/'.$normalizedFilename)) {
+                $matches[] = $path;
+            }
+        }
+
+        if ($matches === []) {
+            return null;
+        }
+
+        sort($matches);
+
+        return [
+            'absolute_path' => end($matches),
+            'filename' => $normalizedFilename,
+        ];
     }
 
     private function findPathByFilename(Filesystem $disk, string $filename, string $profileUuid): ?string
     {
+        $filename = trim($filename);
+
         if ($disk->exists($filename)) {
             return $filename;
         }
@@ -160,7 +295,14 @@ class BackupFileService extends BaseService
             ->sort()
             ->values();
 
-        return $paths->last();
+        if ($paths->isNotEmpty()) {
+            return $paths->last();
+        }
+
+        return collect($disk->allFiles())
+            ->filter(fn (string $path) => str_ends_with(strtolower($path), '.zip'))
+            ->sort()
+            ->last();
     }
 
     private function diskForDestination(BackupDestination $destination, int $profileId): Filesystem
@@ -174,5 +316,35 @@ class BackupFileService extends BaseService
         ]);
 
         return Storage::disk($diskName);
+    }
+
+    private function storageRootFor(BackupDestination $destination): ?string
+    {
+        if ($destination->driver !== StorageDriver::Local) {
+            return null;
+        }
+
+        try {
+            return app(LocalStorageDriver::class)->resolveRootPath($destination->config ?? []);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function normalizeStoragePath(mixed $path): string
+    {
+        if (! is_string($path)) {
+            return '';
+        }
+
+        return str_replace('\\', '/', trim($path));
+    }
+
+    private function absolutePath(string $root, string $relativePath): string
+    {
+        $root = rtrim(str_replace('\\', '/', $root), '/');
+        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+
+        return $root.'/'.$relativePath;
     }
 }

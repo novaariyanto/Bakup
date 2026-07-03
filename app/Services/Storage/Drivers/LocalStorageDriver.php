@@ -47,9 +47,14 @@ class LocalStorageDriver extends AbstractStorageDriver
     {
         return [
             'driver' => 'local',
-            'root' => $this->resolveRoot($config),
+            'root' => $this->resolveRootPath($config),
             'throw' => true,
         ];
+    }
+
+    public function resolveRootPath(array $config): string
+    {
+        return $this->resolveRoot($config);
     }
 
     private function resolveRoot(array $config): string
