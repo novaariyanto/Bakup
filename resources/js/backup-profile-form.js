@@ -15,11 +15,19 @@ export function registerBackupProfileForm(Alpine) {
         tablesError: null,
         tablesEndpoint: config.tablesEndpoint,
         autoLoadTables: config.autoLoadTables ?? false,
+        selectedConnectionId: config.selectedConnectionId != null && config.selectedConnectionId !== ''
+            ? String(config.selectedConnectionId)
+            : '',
 
         init() {
-            if (this.autoLoadTables && this.$refs.connectionSelect?.value) {
+            if (this.autoLoadTables && this.selectedConnectionId) {
                 this.loadTables();
             }
+        },
+
+        onConnectionChange() {
+            this.availableTables = [];
+            this.tablesError = null;
         },
 
         addIncludeFolder() {
@@ -201,7 +209,7 @@ export function registerBackupProfileForm(Alpine) {
         },
 
         async loadTables() {
-            const connectionId = this.$refs.connectionSelect?.value;
+            const connectionId = this.selectedConnectionId;
 
             if (!connectionId) {
                 this.tablesError = 'Pilih koneksi database terlebih dahulu.';

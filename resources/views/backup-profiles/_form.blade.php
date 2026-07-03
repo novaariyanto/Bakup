@@ -55,6 +55,7 @@
         'tableModes' => $tableDumpModes,
         'tablesEndpoint' => url('/backup-profiles/tables'),
         'autoLoadTables' => filled($initialConnectionId) && empty($initialAvailableTables),
+        'selectedConnectionId' => (string) $initialConnectionId,
     ];
 @endphp
 
@@ -105,10 +106,10 @@
                     <div class="flex flex-col gap-2 sm:flex-row">
                         <select
                             name="database_connection_id"
-                            x-ref="connectionSelect"
+                            x-model="selectedConnectionId"
                             class="input-field flex-1"
                             required
-                            @change="availableTables = []; tablesError = null;"
+                            @change="onConnectionChange()"
                         >
                             <option value="">Pilih koneksi database...</option>
                             @foreach ($connections as $connection)
@@ -120,7 +121,7 @@
                         <button
                             type="button"
                             class="btn-secondary shrink-0"
-                            :disabled="loadingTables || ! $refs.connectionSelect?.value"
+                            :disabled="loadingTables || !selectedConnectionId"
                             @click="loadTables()"
                         >
                             <span x-show="!loadingTables">Muat Daftar Tabel</span>
