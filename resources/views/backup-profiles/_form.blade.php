@@ -162,10 +162,11 @@
         <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-sm font-medium text-zinc-300">Mode Backup Tabel</p>
-                <p class="text-xs text-zinc-500">Atur mode per tabel: With Data (schema + data) atau Structure Only (schema saja)</p>
+                <p class="text-xs text-zinc-500">With Data = schema + data · Structure Only = schema saja · Exclude = tidak di-backup</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 <button type="button" @click="setAllStructureOnly()" class="btn-secondary text-xs" :disabled="availableTables.length === 0">Semua Structure Only</button>
+                <button type="button" @click="setAllExclude()" class="btn-secondary text-xs" :disabled="availableTables.length === 0">Semua Exclude</button>
                 <button type="button" @click="resetTableModes()" class="btn-secondary text-xs">Reset Default</button>
             </div>
         </div>
@@ -188,12 +189,13 @@
                         <span class="flex-1 font-medium font-mono text-zinc-200" x-text="table.name"></span>
                         <span class="hidden text-xs text-zinc-500 sm:inline" x-text="tableMeta(table)"></span>
                         <select
-                            class="input-field w-36 shrink-0 py-1.5 text-xs"
+                            class="input-field w-40 shrink-0 py-1.5 text-xs"
                             :value="tableMode(table.name)"
                             @change="setTableMode(table.name, $event.target.value)"
                         >
                             <option value="with_data">With Data</option>
                             <option value="structure_only">Structure Only</option>
+                            <option value="exclude">Exclude</option>
                         </select>
                     </div>
                 </template>
@@ -213,6 +215,7 @@
                 <select x-model="manualTableMode" class="input-field w-40 shrink-0 text-sm">
                     <option value="with_data">With Data</option>
                     <option value="structure_only">Structure Only</option>
+                    <option value="exclude">Exclude</option>
                 </select>
                 <button type="button" class="btn-secondary shrink-0" @click="addManualTables()">Tambah</button>
             </div>
@@ -225,7 +228,7 @@
                     <template x-for="[name, mode] in configuredTables()" :key="'tag-' + name">
                         <span class="inline-flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-900/60 px-2.5 py-1 font-mono text-xs text-zinc-200">
                             <span x-text="name"></span>
-                            <span class="text-zinc-500" x-text="'(' + (mode === 'structure_only' ? 'Structure Only' : 'With Data') + ')'"></span>
+                            <span class="text-zinc-500" x-text="'(' + tableModeLabel(mode) + ')'"></span>
                             <button
                                 type="button"
                                 class="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-red-400"

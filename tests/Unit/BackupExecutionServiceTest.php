@@ -47,6 +47,26 @@ it('builds runtime backup config from profile', function () {
     }
 });
 
+it('builds runtime backup config with excluded tables', function () {
+    $profile = BackupProfile::factory()->create([
+        'backup_database' => true,
+        'backup_folders' => false,
+    ]);
+
+    BackupProfileTable::create([
+        'backup_profile_id' => $profile->id,
+        'table_name' => 'cache',
+        'dump_mode' => TableDumpMode::Exclude,
+    ]);
+
+    $profile->load(['databaseConnection', 'destinations', 'excludedTables', 'includeFolders', 'excludeFolders']);
+
+    $runtimeConfig = app(BackupRuntimeConfigService::class)->build($profile);
+
+    expect($runtimeConfig->databaseConnectionConfig['dump']['exclude_tables'])->toBe(['cache']);
+    expect($runtimeConfig->databaseConnectionConfig['dump']['structure_only_tables'] ?? [])->toBe([]);
+});
+
 it('applies runtime config to laravel config', function () {
     $profile = BackupProfile::factory()->create();
     $profile->load(['databaseConnection', 'destinations', 'excludedTables', 'includeFolders', 'excludeFolders']);

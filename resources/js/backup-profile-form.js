@@ -52,6 +52,14 @@ document.addEventListener('alpine:init', () => {
             return this.tableModes[name] ?? 'with_data';
         },
 
+        tableModeLabel(mode) {
+            return {
+                with_data: 'With Data',
+                structure_only: 'Structure Only',
+                exclude: 'Exclude',
+            }[mode] ?? mode;
+        },
+
         setTableMode(name, mode) {
             if (mode === 'with_data') {
                 delete this.tableModes[name];
@@ -73,6 +81,20 @@ document.addEventListener('alpine:init', () => {
 
             this.manualConfiguredTables().forEach((name) => {
                 modes[name] = 'structure_only';
+            });
+
+            this.tableModes = modes;
+        },
+
+        setAllExclude() {
+            const modes = {};
+
+            this.availableTables.forEach((table) => {
+                modes[table.name] = 'exclude';
+            });
+
+            this.manualConfiguredTables().forEach((name) => {
+                modes[name] = 'exclude';
             });
 
             this.tableModes = modes;

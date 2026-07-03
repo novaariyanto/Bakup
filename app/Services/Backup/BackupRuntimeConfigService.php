@@ -41,8 +41,16 @@ class BackupRuntimeConfigService extends BaseService
             ->pluck('table_name')
             ->all();
 
+        $explicitExcludedTables = $profile->excludedTables
+            ->where('dump_mode', TableDumpMode::Exclude)
+            ->pluck('table_name')
+            ->all();
+
         $dumpOptions = [
-            'exclude_tables' => $this->resolveExcludedTables($profile),
+            'exclude_tables' => array_values(array_unique(array_merge(
+                $this->resolveExcludedTables($profile),
+                $explicitExcludedTables,
+            ))),
             'structure_only_tables' => $structureOnlyTables,
             'useSingleTransaction' => true,
             'dump_binary_path' => $this->dumpBinaryResolver->resolve(),

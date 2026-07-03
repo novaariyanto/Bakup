@@ -199,13 +199,15 @@ class BackupProfileService extends BaseService
                 continue;
             }
 
-            if (TableDumpMode::tryFrom($mode) !== TableDumpMode::StructureOnly) {
+            $dumpMode = TableDumpMode::tryFrom($mode);
+
+            if ($dumpMode === null || $dumpMode === TableDumpMode::WithData) {
                 continue;
             }
 
             $normalized[] = [
                 'table_name' => $tableName,
-                'dump_mode' => TableDumpMode::StructureOnly->value,
+                'dump_mode' => $dumpMode->value,
             ];
         }
 

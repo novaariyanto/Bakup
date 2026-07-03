@@ -28,7 +28,7 @@ it('renders load tables action on create page', function () {
         ->assertSee('Muat Tabel')
         ->assertSee('Mode Backup Tabel')
         ->assertSee('Structure Only')
-        ->assertSee('activity_log, sessions');
+        ->assertSee('Exclude');
 });
 
 it('shows validation errors when create form is incomplete', function () {
@@ -112,6 +112,28 @@ it('creates a backup profile with destinations', function () {
     expect($profile->database_connection_id)->toBe($connection->id);
     expect($profile->destinations)->toHaveCount(1);
     expect($profile->schedule_type->value)->toBe('daily');
+});
+
+it('creates a profile with excluded tables', function () {
+    actingAsAdmin();
+
+    $connection = DatabaseConnection::factory()->create();
+    $destination = BackupDestination::factory()->create();
+
+    $this->post(route('backup-profiles.store'), backupProfilePayload([
+        'name' => 'Exclude Tables Profile',
+        'database_connection_id' => $connection->id,
+        'table_dump_modes' => [
+            'activity_log' => 'exclude',
+            'sessions' => 'exclude',
+        ],
+        'selected_destination_ids' => [$destination->id],
+    ]))->assertRedirect(route('backup-profiles.index'));
+
+    $profile = BackupProfile::where('name', 'Exclude Tables Profile')->first();
+
+    expect($profile->excludedTables->pluck('table_name')->all())->toEqualCanonicalizing(['activity_log', 'sessions']);
+    expect($profile->excludedTables->every(fn ($table) => $table->dump_mode->value === 'exclude'))->toBeTrue();
 });
 
 it('creates a profile with structure only tables', function () {
