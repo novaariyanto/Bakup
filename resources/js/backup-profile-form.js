@@ -1,4 +1,4 @@
-document.addEventListener('alpine:init', () => {
+export function registerBackupProfileForm(Alpine) {
     Alpine.data('backupProfileForm', (config) => ({
         scheduleType: config.scheduleType,
         backupDatabase: config.backupDatabase,
@@ -101,21 +101,12 @@ document.addEventListener('alpine:init', () => {
             }[mode] ?? 'border-zinc-700 bg-zinc-900/60 text-zinc-200';
         },
 
-        onConnectionChange() {
-            this.availableTables = [];
-            this.tablesError = null;
-        },
-
         setTableMode(name, mode) {
             if (mode === 'with_data') {
                 delete this.tableModes[name];
             } else {
                 this.tableModes[name] = mode;
             }
-        },
-
-        get configuredTableEntries() {
-            return Object.entries(this.tableModes);
         },
 
         setAllStructureOnly() {
@@ -248,4 +239,4 @@ document.addEventListener('alpine:init', () => {
             }
         },
     }));
-});
+}

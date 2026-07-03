@@ -108,7 +108,7 @@
                             x-ref="connectionSelect"
                             class="input-field flex-1"
                             required
-                            @change="onConnectionChange()"
+                            @change="availableTables = []; tablesError = null;"
                         >
                             <option value="">Pilih koneksi database...</option>
                             @foreach ($connections as $connection)
@@ -296,10 +296,10 @@
                     </div>
                     <p x-show="manualTableError" x-cloak class="mt-2 text-xs text-red-400" x-text="manualTableError"></p>
 
-                    <div x-show="configuredTableEntries.length > 0" x-cloak class="mt-3">
-                        <p class="mb-2 text-xs font-medium text-zinc-500">Tabel dikonfigurasi (<span x-text="configuredTableEntries.length"></span>)</p>
+                    <div x-show="Object.keys(tableModes).length > 0" x-cloak class="mt-3">
+                        <p class="mb-2 text-xs font-medium text-zinc-500">Tabel dikonfigurasi (<span x-text="Object.keys(tableModes).length"></span>)</p>
                         <div class="flex flex-wrap gap-2">
-                            <template x-for="entry in configuredTableEntries" :key="'tag-' + entry[0]">
+                            <template x-for="entry in Object.entries(tableModes)" :key="'tag-' + entry[0]">
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-xs"
                                     :class="modeTagClass(entry[1])"
@@ -313,7 +313,7 @@
                     </div>
                 </div>
 
-                <template x-for="entry in configuredTableEntries" :key="'mode-' + entry[0]">
+                <template x-for="entry in Object.entries(tableModes)" :key="'mode-' + entry[0]">
                     <input type="hidden" :name="'table_dump_modes[' + entry[0] + ']'" :value="entry[1]">
                 </template>
                 @error('table_dump_modes') <p class="mt-2 text-xs text-red-400">{{ $message }}</p> @enderror
