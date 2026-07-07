@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard;
 
 use App\Enums\BackupHistoryStatus;
+use App\Repositories\MyDumperExportRepository;
 use App\Models\BackupHistory;
 use App\Models\BackupProfile;
 use App\Services\BaseService;
@@ -12,12 +13,17 @@ class DashboardService extends BaseService
 {
     private const ACTIVITY_DAYS = 30;
 
+    public function __construct(
+        private readonly MyDumperExportRepository $mydumperExportRepository,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
     public function getOverview(): array
     {
         $since = now()->subDays(self::ACTIVITY_DAYS)->startOfDay();
+        $mydumperStats = $this->mydumperExportRepository->dashboardStats();
 
         $storageUsed = (int) BackupHistory::query()
             ->where('status', BackupHistoryStatus::Success)
@@ -57,6 +63,7 @@ class DashboardService extends BaseService
             ],
             'activity_chart' => $this->buildActivityChart($since),
             'recent_activity' => $this->buildRecentActivity(),
+            'mydumper_stats' => $mydumperStats,
         ];
     }
 

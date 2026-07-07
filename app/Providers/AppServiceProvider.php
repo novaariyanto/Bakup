@@ -5,8 +5,17 @@ namespace App\Providers;
 use App\Events\Backup\BackupCompleted;
 use App\Events\Backup\BackupFailed;
 use App\Events\Backup\BackupStarted;
+use App\Events\MyDumper\ExportCancelled;
+use App\Events\MyDumper\ExportCompleted;
+use App\Events\MyDumper\ExportFailed;
+use App\Events\MyDumper\ExportStarted;
+use App\Events\MyDumper\ExportUploadCompleted;
+use App\Events\MyDumper\ExportVerificationFailed;
 use App\Listeners\Backup\LogBackupLifecycle;
 use App\Listeners\Backup\SendBackupNotifications;
+use App\Listeners\MyDumper\LogMyDumperLifecycle;
+use App\Listeners\MyDumper\RecordMyDumperActivity;
+use App\Listeners\MyDumper\SendMyDumperNotifications;
 use App\Services\Notification\Drivers\EmailNotificationDriver;
 use App\Services\Notification\Drivers\WhatsAppNotificationDriver;
 use App\Services\Notification\NotificationDriverManager;
@@ -21,6 +30,8 @@ use App\Services\Storage\Sftp\SftpTestConnectionAction;
 use App\Services\Storage\StorageDriverManager;
 use App\Support\BackupLogger;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
+use App\Models\MyDumperExport;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Backup\Tasks\Backup\DbDumperFactory;
 use App\Support\Backup\Dumpers\StructureAwareMySql;
@@ -31,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(BackupLogger::class);
+        $this->app->singleton(\App\Support\MyDumperLogger::class);
 
         $this->app->singleton(SftpAuthenticationResolver::class);
         $this->app->singleton(SftpConfigurationValidator::class);
@@ -60,6 +72,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Route::bind('export', function (string $value): MyDumperExport {
+            return MyDumperExport::query()
+                ->where('id', $value)
+                ->orWhere('uuid', $value)
+                ->firstOrFail();
+        });
+
         if (PHP_OS_FAMILY === 'Windows') {
             DbDumperFactory::extend('mysql', fn () => WindowsCompatibleMySql::create());
         } else {
@@ -74,5 +93,23 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(BackupFailed::class, [$logListener, 'handleFailed']);
         Event::listen(BackupCompleted::class, [$notificationListener, 'handleCompleted']);
         Event::listen(BackupFailed::class, [$notificationListener, 'handleFailed']);
+
+        $mydumperLogListener = LogMyDumperLifecycle::class;
+        $mydumperNotificationListener = SendMyDumperNotifications::class;
+        $mydumperActivityListener = RecordMyDumperActivity::class;
+
+        Event::listen(ExportStarted::class, [$mydumperLogListener, 'handleStarted']);
+        Event::listen(ExportStarted::class, [$mydumperActivityListener, 'handleStarted']);
+        Event::listen(ExportCompleted::class, [$mydumperLogListener, 'handleCompleted']);
+        Event::listen(ExportCompleted::class, [$mydumperNotificationListener, 'handleCompleted']);
+        Event::listen(ExportCompleted::class, [$mydumperActivityListener, 'handleCompleted']);
+        Event::listen(ExportFailed::class, [$mydumperLogListener, 'handleFailed']);
+        Event::listen(ExportFailed::class, [$mydumperNotificationListener, 'handleFailed']);
+        Event::listen(ExportFailed::class, [$mydumperActivityListener, 'handleFailed']);
+        Event::listen(ExportCancelled::class, [$mydumperLogListener, 'handleCancelled']);
+        Event::listen(ExportCancelled::class, [$mydumperNotificationListener, 'handleCancelled']);
+        Event::listen(ExportCancelled::class, [$mydumperActivityListener, 'handleCancelled']);
+        Event::listen(ExportUploadCompleted::class, [$mydumperNotificationListener, 'handleUploadCompleted']);
+        Event::listen(ExportVerificationFailed::class, [$mydumperNotificationListener, 'handleVerificationFailed']);
     }
 }

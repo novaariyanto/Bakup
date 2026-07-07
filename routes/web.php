@@ -7,6 +7,7 @@ use App\Http\Controllers\BackupHistoryDownloadController;
 use App\Http\Controllers\BackupProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseConnectionController;
+use App\Http\Controllers\MyDumperExportController;
 use App\Http\Controllers\NotificationChannelController;
 use App\Http\Controllers\StorageDestinationController;
 use Illuminate\Support\Facades\Route;
@@ -58,6 +59,28 @@ Route::middleware('auth')->group(function (): void {
     Route::get('backup-profiles/progress/{history}', [BackupProfileController::class, 'progress'])
         ->name('backup-profiles.progress');
     Route::resource('backup-profiles', BackupProfileController::class)->except(['show']);
+
+    Route::get('mydumper-exports/tables/{database_connection}', [MyDumperExportController::class, 'tables'])
+        ->name('mydumper-exports.tables');
+    Route::post('mydumper-exports/preview-command', [MyDumperExportController::class, 'previewCommand'])
+        ->name('mydumper-exports.preview-command');
+    Route::get('mydumper-exports/progress/{export}', [MyDumperExportController::class, 'progress'])
+        ->name('mydumper-exports.progress');
+    Route::post('mydumper-exports/bulk', [MyDumperExportController::class, 'bulk'])
+        ->name('mydumper-exports.bulk');
+    Route::get('mydumper-exports/{export}/download-log', [MyDumperExportController::class, 'downloadLog'])
+        ->name('mydumper-exports.download-log');
+    Route::get('mydumper-exports/{export}/download-metadata', [MyDumperExportController::class, 'downloadMetadata'])
+        ->name('mydumper-exports.download-metadata');
+    Route::get('mydumper-exports/{export}/download-file/{fileId}', [MyDumperExportController::class, 'downloadFile'])
+        ->name('mydumper-exports.download-file');
+    Route::post('mydumper-exports/{export}/cancel', [MyDumperExportController::class, 'cancel'])
+        ->name('mydumper-exports.cancel');
+    Route::post('mydumper-exports/{export}/retry', [MyDumperExportController::class, 'retry'])
+        ->name('mydumper-exports.retry');
+    Route::resource('mydumper-exports', MyDumperExportController::class)
+        ->parameters(['mydumper-exports' => 'export'])
+        ->only(['index', 'create', 'store', 'show', 'destroy']);
 
     Route::get('backup-history/progress/{history}', [BackupHistoryController::class, 'progress'])
         ->name('backup-history.progress');

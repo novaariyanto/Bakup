@@ -14,6 +14,7 @@ return [
             'items' => [
                 ['label' => 'Database Connections', 'route' => 'database-connections.index', 'icon' => 'database'],
                 ['label' => 'Backup Profiles', 'route' => 'backup-profiles.index', 'icon' => 'profile'],
+                ['label' => 'MyDumper Export', 'route' => 'mydumper-exports.index', 'icon' => 'export'],
                 ['label' => 'Storage Destinations', 'route' => 'storage-destinations.index', 'icon' => 'storage'],
                 ['label' => 'Backup History', 'route' => 'backup-history.index', 'icon' => 'history'],
             ],

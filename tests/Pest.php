@@ -61,6 +61,10 @@ pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Unit/DashboardServiceTest.php');
 
+pest()->extend(Tests\TestCase::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->in('Unit/MyDumper');
+
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });
@@ -74,6 +78,10 @@ function actingAsAdmin(): User
         'backup-destinations.manage',
         'backup-history.view',
         'backup-history.run',
+        'mydumper-exports.manage',
+        'mydumper-exports.view',
+        'mydumper-exports.run',
+        'mydumper-exports.delete',
         'notifications.manage',
         'activity.view',
         'settings.manage',

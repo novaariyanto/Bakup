@@ -25,6 +25,8 @@ class NotificationChannel extends Model
         'is_active',
         'notify_on_success',
         'notify_on_failure',
+        'notify_on_upload_complete',
+        'notify_on_verification_failed',
         'metadata',
         'last_tested_at',
         'last_test_status',
@@ -43,6 +45,8 @@ class NotificationChannel extends Model
             'is_active' => 'boolean',
             'notify_on_success' => 'boolean',
             'notify_on_failure' => 'boolean',
+            'notify_on_upload_complete' => 'boolean',
+            'notify_on_verification_failed' => 'boolean',
             'metadata' => 'array',
             'last_tested_at' => 'datetime',
         ];

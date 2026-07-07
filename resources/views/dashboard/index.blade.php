@@ -19,6 +19,19 @@
         <x-ui.stat-card label="Gagal" :value="$stats['backups_failed']" change="30 hari terakhir" />
     </div>
 
+    <div class="mt-6">
+        <x-ui.card title="MyDumper Export" description="Status export hari ini">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <x-ui.stat-card label="Running" :value="$mydumperStats['running']" />
+                <x-ui.stat-card label="Queued" :value="$mydumperStats['queued']" />
+                <x-ui.stat-card label="Success Today" :value="$mydumperStats['success_today']" />
+                <x-ui.stat-card label="Failed Today" :value="$mydumperStats['failed_today']" />
+                <x-ui.stat-card label="Avg Speed" :value="$mydumperStats['average_speed_mbps'].' MB/s'" />
+                <x-ui.stat-card label="Total Size Today" :value="number_format($mydumperStats['total_size_today'] / 1024 / 1024, 1).' MB'" />
+            </div>
+        </x-ui.card>
+    </div>
+
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         <div class="lg:col-span-2">
             <x-ui.card title="Backup Activity" description="Aktivitas 30 hari terakhir">

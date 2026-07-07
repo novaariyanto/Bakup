@@ -17,6 +17,7 @@ class DashboardController extends Controller
             'stats' => $overview['stats'],
             'activityChart' => $overview['activity_chart'],
             'recentActivity' => $overview['recent_activity'],
+            'mydumperStats' => $overview['mydumper_stats'],
         ]);
     }
 }
