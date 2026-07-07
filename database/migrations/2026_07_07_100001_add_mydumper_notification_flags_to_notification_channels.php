@@ -8,10 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('notification_channels', function (Blueprint $table) {
-            $table->boolean('notify_on_upload_complete')->default(false)->after('notify_on_failure');
-            $table->boolean('notify_on_verification_failed')->default(true)->after('notify_on_upload_complete');
-        });
+        if (! Schema::hasColumn('notification_channels', 'notify_on_upload_complete')) {
+            Schema::table('notification_channels', function (Blueprint $table) {
+                $table->boolean('notify_on_upload_complete')->default(false)->after('notify_on_failure');
+            });
+        }
+
+        if (! Schema::hasColumn('notification_channels', 'notify_on_verification_failed')) {
+            Schema::table('notification_channels', function (Blueprint $table) {
+                $table->boolean('notify_on_verification_failed')->default(true)->after('notify_on_upload_complete');
+            });
+        }
     }
 
     public function down(): void

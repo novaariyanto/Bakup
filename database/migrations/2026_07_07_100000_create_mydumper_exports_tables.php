@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('mydumper_export_profiles', function (Blueprint $table) {
+        if (! Schema::hasTable('mydumper_export_profiles')) {
+            Schema::create('mydumper_export_profiles', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name');
@@ -36,9 +37,11 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['is_active', 'schedule_type', 'next_run_at']);
-        });
+            });
+        }
 
-        Schema::create('mydumper_exports', function (Blueprint $table) {
+        if (! Schema::hasTable('mydumper_exports')) {
+            Schema::create('mydumper_exports', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('profile_id')->nullable()->constrained('mydumper_export_profiles')->nullOnDelete();
@@ -83,9 +86,11 @@ return new class extends Migration
 
             $table->index(['status', 'created_at']);
             $table->index(['profile_id', 'status']);
-        });
+            });
+        }
 
-        Schema::create('mydumper_export_logs', function (Blueprint $table) {
+        if (! Schema::hasTable('mydumper_export_logs')) {
+            Schema::create('mydumper_export_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('export_id')->constrained('mydumper_exports')->cascadeOnDelete();
             $table->string('level')->default('info');
@@ -94,9 +99,11 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
 
             $table->index(['export_id', 'created_at']);
-        });
+            });
+        }
 
-        Schema::create('mydumper_export_files', function (Blueprint $table) {
+        if (! Schema::hasTable('mydumper_export_files')) {
+            Schema::create('mydumper_export_files', function (Blueprint $table) {
             $table->id();
             $table->foreignId('export_id')->constrained('mydumper_exports')->cascadeOnDelete();
             $table->string('relative_path');
@@ -106,7 +113,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['export_id', 'relative_path']);
-        });
+            });
+        }
     }
 
     public function down(): void
