@@ -4,6 +4,7 @@ namespace App\Services\MyDumper;
 
 use App\DTO\MyDumper\MyDumperExportOptions;
 use App\Enums\MyDumper\MyDumperExportType;
+use App\Enums\MyDumper\MyDumperLockMode;
 use App\Models\DatabaseConnection;
 use App\Models\MyDumperExport;
 use App\Models\MyDumperExportProfile;
@@ -11,6 +12,9 @@ use App\Services\BaseService;
 
 class MyDumperCommandBuilder extends BaseService
 {
+    public function __construct(
+        private readonly MyDumperBinaryResolver $binaryResolver,
+    ) {}
     /**
      * @return array<int, string>
      */
@@ -214,9 +218,9 @@ class MyDumperCommandBuilder extends BaseService
             $command[] = '--kill-long-queries';
         }
 
-        $command[] = '--lock-mode='.$options->lockMode->cliValue();
+        $this->applyLockMode($command, $options);
 
-        if ($options->trxConsistencyOnly) {
+        if ($options->trxConsistencyOnly && $this->supportsTrxConsistencyOnly()) {
             $command[] = '--trx-consistency-only';
         }
 
@@ -267,6 +271,39 @@ class MyDumperCommandBuilder extends BaseService
         if ($options->daemonMode) {
             $command[] = '--daemon';
         }
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    private function applyLockMode(array &$command, MyDumperExportOptions $options): void
+    {
+        if ($options->lockMode === MyDumperLockMode::Auto) {
+            return;
+        }
+
+        $version = $this->binaryResolver->version();
+
+        if ($version === null || version_compare($version, '0.10.0', '>=')) {
+            $command[] = '--sync-thread-lock-mode';
+            $command[] = $options->lockMode->cliValue();
+
+            return;
+        }
+
+        match ($options->lockMode) {
+            MyDumperLockMode::NoLock => $command[] = '--no-locks',
+            MyDumperLockMode::LockAll => $command[] = '--lock-all-tables',
+            MyDumperLockMode::SafeNoLock => $command[] = '--less-locking',
+            MyDumperLockMode::Auto => null,
+        };
+    }
+
+    private function supportsTrxConsistencyOnly(): bool
+    {
+        $version = $this->binaryResolver->version();
+
+        return $version === null || version_compare($version, '1.0.1', '<');
     }
 
     /**

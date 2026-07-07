@@ -84,6 +84,16 @@ class MyDumperBinaryResolver extends BaseService
 
     private function isExecutable(string $path): bool
     {
-        return is_file($path) && is_executable($path);
+        if (! is_file($path)) {
+            return false;
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+            return in_array($extension, ['exe', 'bat', 'cmd', 'com'], true) || is_executable($path);
+        }
+
+        return is_executable($path);
     }
 }

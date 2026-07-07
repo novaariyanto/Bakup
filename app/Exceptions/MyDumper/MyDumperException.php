@@ -10,7 +10,7 @@ class MyDumperException extends BackupManagerException
     {
         return new self(
             message: 'mydumper binary not found.',
-            userMessage: 'mydumper tidak ditemukan di PATH. Install mydumper atau set MYDUMPER_BINARY di .env.',
+            userMessage: 'mydumper tidak ditemukan di PATH. Install mydumper (Linux/WSL: apt install mydumper) lalu set MYDUMPER_BINARY di .env. Windows + WSL: gunakan scripts/mydumper-wsl.bat setelah mydumper terpasang di WSL.',
         );
     }
 

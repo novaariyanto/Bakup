@@ -74,6 +74,45 @@ it('adds selected tables', function () {
         ->and(implode(' ', $command))->toContain('-T orders');
 });
 
+it('omits lock mode flag when auto is selected', function () {
+    $connection = DatabaseConnection::factory()->create();
+
+    $command = app(MyDumperCommandBuilder::class)->build(
+        connection: $connection,
+        database: 'test',
+        outputDirectory: '/tmp/export',
+        exportType: MyDumperExportType::Full,
+        threads: 4,
+        compression: false,
+        options: MyDumperExportOptions::fromArray(['lock_mode' => 'auto']),
+    );
+
+    expect(implode(' ', $command))->not->toContain('--lock-mode')
+        ->and(implode(' ', $command))->not->toContain('--sync-thread-lock-mode');
+});
+
+it('uses sync-thread-lock-mode for non-auto lock modes', function () {
+    $this->mock(\App\Services\MyDumper\MyDumperBinaryResolver::class, function ($mock) {
+        $mock->shouldReceive('version')->andReturn('0.12.0');
+    });
+
+    $connection = DatabaseConnection::factory()->create();
+
+    $command = app(MyDumperCommandBuilder::class)->build(
+        connection: $connection,
+        database: 'test',
+        outputDirectory: '/tmp/export',
+        exportType: MyDumperExportType::Full,
+        threads: 4,
+        compression: false,
+        options: MyDumperExportOptions::fromArray(['lock_mode' => 'no_lock']),
+    );
+
+    expect($command)->toContain('--sync-thread-lock-mode')
+        ->and($command)->toContain('NO_LOCK')
+        ->and($command)->not->toContain('--lock-mode');
+});
+
 it('formats preview command as multiline string', function () {
     $connection = DatabaseConnection::factory()->create();
 
